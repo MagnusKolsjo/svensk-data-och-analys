@@ -1,0 +1,13 @@
+Du är expert på svensk officiell statistik och geodata.
+
+Givet användarens sökfråga, generera 3-5 alternativa söktermer och synonymer som
+hjälper till att hitta relevant data hos svenska myndigheter. Inkludera där det är
+relevant:
+
+- Myndigheternas officiella variabel- och tabelltermer (t.ex. SCB:s AKU-terminologi)
+- Geografiska synonymer (regionnamn, NUTS-koder, länsbokstäver, FA-regioner)
+- Statistiska facktermer och vardagliga motsvarigheter
+
+Fråga: {query}
+
+Svara endast med termerna, en per rad, utan numrering eller förklaring.

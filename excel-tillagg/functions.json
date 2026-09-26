@@ -1,0 +1,46 @@
+{
+  "allowCustomDataForDataTypeAny": true,
+  "functions": [
+    {
+      "id": "SOK",
+      "name": "SOK",
+      "description": "Söker i svenska datakällor (semantiskt). Returnerar namn, källa, typ och hämtväg — en rad per träff.",
+      "parameters": [
+        { "name": "fraga", "description": "Sökfråga, t.ex. \"arbetslöshet\" eller \"styrränta\".", "type": "string" },
+        { "name": "antal", "description": "Max antal träffar (standard 10).", "type": "number", "optional": true }
+      ],
+      "result": { "dimensionality": "matrix", "type": "any" }
+    },
+    {
+      "id": "HAMTA",
+      "name": "HAMTA",
+      "description": "Hämtar data från en API-sökväg (kolumnen hämtväg från SOK) och spiller ut som tabell.",
+      "parameters": [
+        { "name": "sokvag", "description": "API-sökväg, t.ex. /kolada/data?kpi=N00945.", "type": "string" }
+      ],
+      "result": { "dimensionality": "matrix", "type": "any" }
+    },
+    {
+      "id": "KOLADA",
+      "name": "KOLADA",
+      "description": "Hämtar Kolada-nyckeltal för en eller flera KPI:er, kommuner och år.",
+      "parameters": [
+        { "name": "kpi", "description": "KPI-id, t.ex. N00945. Flera kommaseparerade.", "type": "string" },
+        { "name": "kommun", "description": "Kommunkod(er), kommaseparerade. Tomt = alla.", "type": "string", "optional": true },
+        { "name": "ar", "description": "År, kommaseparerade. Tomt = alla.", "type": "string", "optional": true }
+      ],
+      "result": { "dimensionality": "matrix", "type": "any" }
+    },
+    {
+      "id": "RIKSBANK",
+      "name": "RIKSBANK",
+      "description": "Hämtar en Riksbanksserie (t.ex. SECBREPOEFF för styrräntan) mellan två datum.",
+      "parameters": [
+        { "name": "serie", "description": "Serie-id, t.ex. SECBREPOEFF.", "type": "string" },
+        { "name": "fran", "description": "Från-datum (YYYY-MM-DD). Tomt = hela historiken.", "type": "string", "optional": true },
+        { "name": "till", "description": "Till-datum (YYYY-MM-DD).", "type": "string", "optional": true }
+      ],
+      "result": { "dimensionality": "matrix", "type": "any" }
+    }
+  ]
+}

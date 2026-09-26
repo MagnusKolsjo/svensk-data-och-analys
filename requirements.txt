@@ -1,0 +1,67 @@
+# ═══════════════════════════════════════════════════════════════════
+# svensk-data-och-analys — beroenden
+#
+# Kräver Python 3.12 eller senare och mcp 2.x. mcp 2.x döpte om FastMCP
+# till MCPServer och flyttade modulen till mcp.server.mcpserver, så
+# sviten går inte att köra mot mcp 1.x.
+#
+# Skapa en virtuell miljö i repots rot och installera:
+#   python3 -m venv .venv
+#   .venv/bin/pip install -r requirements.txt
+# ═══════════════════════════════════════════════════════════════════
+
+
+# ── MCP ──────────────────────────────────────────────────────────────
+# Övre tak av samma skäl som taket i den delade requirements.txt:
+# nästa major kan byta namn på serverklassen igen.
+mcp>=2.0,<3
+
+
+# ── Async HTTP och validering ────────────────────────────────────────
+httpx>=0.27
+pydantic>=2.9
+certifi>=2024.0
+
+
+# ── Databas — Postgres och SQLite är symmetriska val ─────────────────
+asyncpg>=0.30
+aiosqlite>=0.20
+
+
+# ── MCP http-transport (DOA_MCP_TRANSPORT=http) ──────────────────────
+# Importeras bara i http-läget; stdio kräver dem inte.
+starlette>=0.40
+uvicorn>=0.30
+
+
+# ── FastAPI-lagret för Excel och Power Query ─────────────────────────
+fastapi>=0.115
+
+
+# ── Filformat ────────────────────────────────────────────────────────
+openpyxl>=3.1           # SCB:s folkmängdsserie som XLSX
+xlrd>=2.0               # äldre Excel (.xls) i öppna data-filer
+odfpy>=1.4              # OpenDocument-kalkylark (.ods) i öppna data-filer
+rdflib>=7.0             # DCAT-kataloger som RDF/XML, Turtle eller JSON-LD
+ijson>=3.2              # strömmande GeoJSON — geometrifiler är för stora för json.load
+pandas>=2.2
+pdfplumber>=0.10
+
+
+# ── Geometribearbetning ──────────────────────────────────────────────
+# Merparten av geometriarbetet görs i PostGIS, där datat ändå ligger.
+# Det som inte kan göras i SQL är att läsa källformat som PostGIS inte
+# tar direkt — EEA:s kustlinje levereras som shapefile — och där är
+# geopandas rätt verktyg. Det drar in shapely, pyproj och pyogrio.
+geopandas>=1.0
+shapely>=2.0
+
+
+# ── Konfiguration ────────────────────────────────────────────────────
+python-dotenv>=1.0
+
+
+# ── Semantisk sökning ────────────────────────────────────────────────
+# OBS: drar in torch (~1 GB). Kommentera bort om sviten körs utan
+# semantisk sökning — inget MCP-verktyg kräver den vid uppstart.
+sentence-transformers>=3.0

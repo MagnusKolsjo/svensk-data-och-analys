@@ -1,0 +1,269 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Områdeskarta</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { margin:0; font:13px/1.4 system-ui,-apple-system,sans-serif;
+         background:var(--bg,#fff); color:var(--fg,#1a1a1a); }
+  #topp { display:flex; align-items:baseline; gap:.75rem; padding:.6rem .9rem 0; }
+  h1 { font-size:15px; font-weight:600; margin:0; }
+  #status { font-size:12px; opacity:.65; }
+  /* Höjden styr och bredden följer viewBoxen. Ett utsnitt kan vara stående
+     (Sverige) eller liggande (en stad), så formatet får inte vara låst. */
+  #scen { display:flex; justify-content:center; padding:.3rem .9rem; }
+  svg { display:block; height:460px; width:auto; max-width:100%; }
+  path { stroke:var(--bg,#fff); stroke-width:.4; stroke-linejoin:round; }
+  path:hover { stroke:var(--fg,#000); stroke-width:1.2; }
+  #fot { display:flex; justify-content:space-between; align-items:center;
+         gap:1rem; padding:.2rem .9rem .7rem; font-size:11px; opacity:.6; }
+  #skala { display:flex; align-items:center; gap:.35rem; }
+  #skala i { width:20px; height:9px; display:inline-block; border-radius:1px; }
+  #namn { font-weight:600; opacity:1; min-height:1.2em; }
+</style>
+
+<div id="topp"><h1 id="rubrik">Karta</h1><span id="status">väntar på data…</span></div>
+<div id="scen"><svg id="karta" role="img" aria-label="Karta"></svg></div>
+<div id="fot">
+  <span id="namn"></span>
+  <span id="skala"></span>
+</div>
+<div id="fot"><span id="attribution"></span></div>
+
+<script>
+// Geometri och attribution injiceras av resurshanteraren i geo_mcp.py.
+// Kommunkartan får sin geometri inbakad; den generiska resursen får `null`
+// och hämtar geometrin för det urval som ska visas.
+const INBAKAD = __GEOMETRI__;
+const ATTRIBUTION = __ATTRIBUTION__;
+
+// ---------------------------------------------------------------------------
+// Projektion
+// ---------------------------------------------------------------------------
+// Koordinaterna är WGS84. Ritas grader som ett plant rutnät blir kartan för
+// bred i norr, eftersom en longitudgrad krymper mot polerna (63 km i Skåne,
+// 41 km i Kiruna). Vi skalar därför x med cosinus för medelbreddgraden — en
+// enkel likvinklig approximation som räcker gott för ett land i Sveriges
+// nord-sydliga utsträckning, och lika väl för ett kommunutsnitt.
+const RUTA = 520;   // längsta sidan i användarenheter
+
+function projektion(omraden) {
+  const tal = omraden.flatMap(o => o.d.flat(2));
+  const lons = tal.filter((_, i) => i % 2 === 0);
+  const lats = tal.filter((_, i) => i % 2 === 1);
+  const lonMin = Math.min(...lons), lonMax = Math.max(...lons);
+  const latMin = Math.min(...lats), latMax = Math.max(...lats);
+  const kx = Math.cos((latMin + latMax) / 2 * Math.PI / 180);
+
+  const bredd = Math.max((lonMax - lonMin) * kx, 1e-9);
+  const hojd = Math.max(latMax - latMin, 1e-9);
+  const M = 8;
+  const W = hojd >= bredd ? RUTA * bredd / hojd : RUTA;
+  const H = hojd >= bredd ? RUTA : RUTA * hojd / bredd;
+  const skala = Math.min((W - 2*M) / bredd, (H - 2*M) / hojd);
+
+  return {
+    W, H,
+    px: lon => M + (lon - lonMin) * kx * skala,
+    py: lat => M + (latMax - lat) * skala,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Färgskala — sekventiell, ljus till mörk, läsbar i båda teman
+// ---------------------------------------------------------------------------
+const FARGER = ["#eef3f8","#cfe0ee","#a8c8e1","#7aabd2","#4a8bc2","#2a6aa8","#14497e"];
+const SAKNAS = "#d8d8d8";
+
+function kvantiler(varden, n) {
+  const s = [...varden].sort((a, b) => a - b);
+  return Array.from({length: n - 1}, (_, i) =>
+    s[Math.floor((i + 1) / n * (s.length - 1))]);
+}
+
+// ---------------------------------------------------------------------------
+// Rendering
+// ---------------------------------------------------------------------------
+const svg = document.getElementById("karta");
+const NS = "http://www.w3.org/2000/svg";
+let banor = new Map(), namnPer = {}, vardePer = {};
+
+function rita(omraden) {
+  svg.textContent = "";
+  banor = new Map();
+  if (!omraden.length) return;
+
+  const pr = projektion(omraden);
+  svg.setAttribute("viewBox", `0 0 ${pr.W.toFixed(0)} ${pr.H.toFixed(0)}`);
+
+  for (const o of omraden) {
+    const d = o.d.map(ring =>
+      "M" + ring.map(([lon, lat]) =>
+        pr.px(lon).toFixed(1) + "," + pr.py(lat).toFixed(1)).join("L") + "Z"
+    ).join("");
+    const p = document.createElementNS(NS, "path");
+    p.setAttribute("d", d);
+    p.setAttribute("fill", SAKNAS);
+    p.dataset.kod = o.k;
+    if (o.n) namnPer[o.k] = o.n;
+    p.addEventListener("mouseenter", () => visa(o.k));
+    svg.appendChild(p);
+    banor.set(o.k, p);
+  }
+}
+
+function visa(kod) {
+  const v = vardePer[kod];
+  document.getElementById("namn").textContent =
+    (namnPer[kod] || kod) + (v == null ? "" : " — " + v.toLocaleString("sv-SE"));
+}
+
+// Nyckeln normaliseras här och bara här. Varje indelning har sitt eget
+// fältnamn i källan — kommun_kod, deso_kod, regso_kod — och widgeten ska
+// aldrig behöva känna till dem. Läggs en ny indelning till räcker det att
+// verktyget levererar `kod`.
+function normalisera(rader) {
+  return rader.map(r => ({
+    kod: r.kod || r.kommun_kod || r.deso_kod || r.regso_kod || r.valdistrikt_kod,
+    namn: r.namn || r.kommun_namn,
+    varde: r.varde != null ? r.varde : r.folkmangd,
+  })).filter(r => r.kod);
+}
+
+function mala(rader) {
+  vardePer = {};
+  for (const r of normalisera(rader)) {
+    vardePer[r.kod] = r.varde;
+    if (r.namn) namnPer[r.kod] = r.namn;
+  }
+  const varden = Object.values(vardePer).filter(v => v != null);
+  if (!varden.length) {
+    document.getElementById("status").textContent =
+      "inga värden gick att koppla till områdeskoderna";
+    return;
+  }
+  const brytpunkter = kvantiler(varden, FARGER.length);
+  let malade = 0;
+  for (const [kod, p] of banor) {
+    const v = vardePer[kod];
+    if (v == null) { p.setAttribute("fill", SAKNAS); continue; }
+    let i = 0; while (i < brytpunkter.length && v > brytpunkter[i]) i++;
+    p.setAttribute("fill", FARGER[i]);
+    malade++;
+  }
+  document.getElementById("skala").innerHTML =
+    "<span>lägre</span>" + FARGER.map(f => `<i style="background:${f}"></i>`).join("") +
+    "<span>högre</span>";
+  document.getElementById("status").textContent =
+    malade + " av " + banor.size + " områden";
+}
+
+document.getElementById("attribution").textContent = ATTRIBUTION;
+
+// ---------------------------------------------------------------------------
+// Värdprotokoll — JSON-RPC över postMessage
+// ---------------------------------------------------------------------------
+// Fälten nedan är hämtade ur värdens egen schemadefinition, inte ur
+// dokumentation: `appInfo` (inte clientInfo), `protocolVersion` obligatorisk,
+// och tool-result bär resultatet direkt i `params`.
+const UI_PROTOKOLL = "2026-01-26";
+
+let nastaId = 1;
+function begar(metod, params) {
+  const id = nastaId++;
+  window.parent.postMessage({jsonrpc: "2.0", id, method: metod, params}, "*");
+  return new Promise((klar, fel) => {
+    window.addEventListener("message", function lyss(e) {
+      if (!e.data || e.data.id !== id) return;
+      // Ett svar bär result eller error; en begäran bär method. Utan den
+      // här raden matchar vi vår egen utgående begäran om värden råkar
+      // dela fönster med oss, och löser ut löftet med undefined.
+      if (e.data.method !== undefined) return;
+      window.removeEventListener("message", lyss);
+      // Ett JSON-RPC-fel måste avvisa löftet. Gjorde det inte det såg
+      // handskakningen ut att lyckas medan värden aldrig gick vidare.
+      if (e.data.error) fel(new Error(e.data.error.message || "okänt fel"));
+      else klar(e.data.result);
+    });
+  });
+}
+const notis = (metod, params) =>
+  window.parent.postMessage({jsonrpc: "2.0", method: metod, params}, "*");
+
+// Värden ger iframen en förvald höjd tills appen säger ifrån.
+function rapportera_storlek() {
+  notis("ui/notifications/size-changed", {
+    height: Math.ceil(document.documentElement.scrollHeight),
+  });
+}
+
+// Widgeten anropar verktyg själv över bryggan. Geometrin går därför till
+// widgeten och aldrig genom modellens kontext — det är förutsättningen för
+// att DeSO och valdistrikt ska gå att visa alls.
+async function hamta_geometri(p) {
+  const svar = await begar("tools/call", {
+    name: "geo_karta_geometri",
+    arguments: {
+      omradestyp: p.omradestyp,
+      inom_kommun: p.urval && p.urval.inom_kommun,
+      inom_lan: p.urval && p.urval.inom_lan,
+    },
+  });
+  const d = svar && (svar.structuredContent || svar.structured_content);
+  return (d && d.omraden) || [];
+}
+
+async function ta_emot(nyttolast) {
+  const r = nyttolast || {};
+  try {
+    if (r.omradestyp && r.varden) {
+      // Generisk karta: geometrin hämtas för det urval som ska visas.
+      document.getElementById("rubrik").textContent = r.etikett || "Karta";
+      document.getElementById("status").textContent = "hämtar geometri…";
+      const omraden = await hamta_geometri(r);
+      if (!omraden.length) {
+        document.getElementById("status").textContent =
+          "ingen geometri för urvalet — är indelningen synkad?";
+        return;
+      }
+      rita(omraden);
+      mala(r.varden);
+    } else if (r.datapunkter) {
+      // Kommunkartan: geometrin är inbakad i resursen.
+      if (!banor.size && Array.isArray(INBAKAD)) rita(INBAKAD);
+      mala(r.datapunkter);
+    } else {
+      return;
+    }
+  } catch (fel) {
+    document.getElementById("status").textContent = "fel: " + fel.message;
+  }
+  rapportera_storlek();
+}
+
+window.addEventListener("message", e => {
+  if (!e.data || e.data.method !== "ui/notifications/tool-result") return;
+  // params ÄR verktygsresultatet — inte params.result.
+  const r = e.data.params || {};
+  ta_emot(r.structuredContent || r.structured_content);
+});
+
+(async () => {
+  if (Array.isArray(INBAKAD)) {
+    rita(INBAKAD);
+    document.getElementById("rubrik").textContent = "Folkmängd per kommun";
+  }
+  try {
+    await begar("ui/initialize", {
+      protocolVersion: UI_PROTOKOLL,
+      appInfo: {name: "doa-omradeskarta", version: "1.0.0"},
+      appCapabilities: {availableDisplayModes: ["inline", "fullscreen"]},
+    });
+    notis("ui/notifications/initialized", {});
+    document.getElementById("status").textContent = "ansluten, väntar på data…";
+    rapportera_storlek();
+  } catch (fel) {
+    document.getElementById("status").textContent =
+      "kunde inte ansluta till värden: " + fel.message;
+  }
+})();
+</script>

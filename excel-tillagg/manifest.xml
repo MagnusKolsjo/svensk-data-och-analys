@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SPDX-License-Identifier: AGPL-3.0-or-later
+  Copyright (C) 2026 Magnus Kolsjö
+
+  Office-tillägg för svensk-data-och-analys: sidopanel (sök + fasetter +
+  infoga) och anpassade funktioner (DOA.*) mot den lokala FastAPI-tjänsten.
+  Filerna serveras över HTTPS på localhost:8443 (Power Query använder HTTP
+  :8000 oförändrat).
+-->
+<OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
+           xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides"
+           xsi:type="TaskPaneApp">
+  <Id>d3a9f1c2-5b7e-4e1a-9c3d-8f2b1a6e7c40</Id>
+  <Version>1.0.0.0</Version>
+  <ProviderName>Magnus Kolsjö</ProviderName>
+  <DefaultLocale>sv-SE</DefaultLocale>
+  <DisplayName DefaultValue="Svensk data och analys" />
+  <Description DefaultValue="Sök och infoga svensk officiell statistik och geodata direkt i Excel." />
+  <IconUrl DefaultValue="https://localhost:8443/tillagg/assets/icon-32.png" />
+  <HighResolutionIconUrl DefaultValue="https://localhost:8443/tillagg/assets/icon-80.png" />
+  <SupportUrl DefaultValue="https://localhost:8443/tillagg/taskpane.html" />
+  <AppDomains>
+    <AppDomain>https://localhost:8443</AppDomain>
+  </AppDomains>
+  <Hosts>
+    <Host Name="Workbook" />
+  </Hosts>
+  <Requirements>
+    <Sets DefaultMinVersion="1.1">
+      <Set Name="SharedRuntime" MinVersion="1.1" />
+    </Sets>
+  </Requirements>
+  <DefaultSettings>
+    <SourceLocation DefaultValue="https://localhost:8443/tillagg/taskpane.html" />
+  </DefaultSettings>
+  <Permissions>ReadWriteDocument</Permissions>
+
+  <VersionOverrides xmlns="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="VersionOverridesV1_0">
+    <Hosts>
+      <Host xsi:type="Workbook">
+        <Runtimes>
+          <Runtime resid="SharedRuntime.Url" lifetime="long" />
+        </Runtimes>
+        <AllFormFactors>
+          <ExtensionPoint xsi:type="CustomFunctions">
+            <Script>
+              <SourceLocation resid="Functions.Script.Url" />
+            </Script>
+            <Page>
+              <SourceLocation resid="Functions.Page.Url" />
+            </Page>
+            <Metadata>
+              <SourceLocation resid="Functions.Metadata.Url" />
+            </Metadata>
+            <Namespace resid="Functions.Namespace" />
+          </ExtensionPoint>
+        </AllFormFactors>
+        <DesktopFormFactor>
+          <GetStarted>
+            <Title resid="GetStarted.Title" />
+            <Description resid="GetStarted.Description" />
+            <LearnMoreUrl resid="GetStarted.LearnMoreUrl" />
+          </GetStarted>
+          <FunctionFile resid="SharedRuntime.Url" />
+          <ExtensionPoint xsi:type="PrimaryCommandSurface">
+            <OfficeTab id="TabHome">
+              <Group id="DoaGroup">
+                <Label resid="Group.Label" />
+                <Icon>
+                  <bt:Image size="16" resid="Icon.16" />
+                  <bt:Image size="32" resid="Icon.32" />
+                  <bt:Image size="80" resid="Icon.80" />
+                </Icon>
+                <Control xsi:type="Button" id="OppnaPanelKnapp">
+                  <Label resid="Button.Label" />
+                  <Supertip>
+                    <Title resid="Button.Label" />
+                    <Description resid="Button.Tooltip" />
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="Icon.16" />
+                    <bt:Image size="32" resid="Icon.32" />
+                    <bt:Image size="80" resid="Icon.80" />
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <TaskpaneId>DoaTaskpane</TaskpaneId>
+                    <SourceLocation resid="Taskpane.Url" />
+                  </Action>
+                </Control>
+              </Group>
+            </OfficeTab>
+          </ExtensionPoint>
+        </DesktopFormFactor>
+      </Host>
+    </Hosts>
+    <Resources>
+      <bt:Images>
+        <bt:Image id="Icon.16" DefaultValue="https://localhost:8443/tillagg/assets/icon-32.png" />
+        <bt:Image id="Icon.32" DefaultValue="https://localhost:8443/tillagg/assets/icon-32.png" />
+        <bt:Image id="Icon.80" DefaultValue="https://localhost:8443/tillagg/assets/icon-80.png" />
+      </bt:Images>
+      <bt:Urls>
+        <bt:Url id="Taskpane.Url" DefaultValue="https://localhost:8443/tillagg/taskpane.html" />
+        <bt:Url id="SharedRuntime.Url" DefaultValue="https://localhost:8443/tillagg/functions.html" />
+        <bt:Url id="Functions.Script.Url" DefaultValue="https://localhost:8443/tillagg/functions.js" />
+        <bt:Url id="Functions.Page.Url" DefaultValue="https://localhost:8443/tillagg/functions.html" />
+        <bt:Url id="Functions.Metadata.Url" DefaultValue="https://localhost:8443/tillagg/functions.json" />
+        <bt:Url id="GetStarted.LearnMoreUrl" DefaultValue="https://localhost:8443/tillagg/taskpane.html" />
+      </bt:Urls>
+      <bt:ShortStrings>
+        <bt:String id="Functions.Namespace" DefaultValue="DOA" />
+        <bt:String id="Group.Label" DefaultValue="Svensk data" />
+        <bt:String id="Button.Label" DefaultValue="Sök data" />
+        <bt:String id="GetStarted.Title" DefaultValue="Svensk data och analys" />
+      </bt:ShortStrings>
+      <bt:LongStrings>
+        <bt:String id="Button.Tooltip" DefaultValue="Öppna panelen för att söka och infoga svensk statistik." />
+        <bt:String id="GetStarted.Description" DefaultValue="Klicka på Sök data för att börja." />
+      </bt:LongStrings>
+    </Resources>
+  </VersionOverrides>
+</OfficeApp>

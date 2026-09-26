@@ -1,0 +1,20 @@
+[general]
+name=Svensk data och analys
+qgisMinimumVersion=3.16
+qgisMaximumVersion=4.99
+supportsQt6=True
+description=Sök svensk officiell statistik och visa på karta. Importera analysresultat (kommunkod + värde) som choropleth.
+version=1.0
+author=Magnus Kolsjö
+email=
+about=Söker mot den lokala FastAPI-tjänsten (localhost:8000) och lägger upp choropleth-lager i QGIS — kommun, län, DeSO, RegSO och valdistrikt. Visa källstatistik (t.ex. Kolada-nyckeltal) eller resultat av egna analyser. Kräver att doa-api-tjänsten körs lokalt.
+tracker=https://github.com/MagnusKolsjo/svensk-data-och-analys/issues
+repository=https://github.com/MagnusKolsjo/svensk-data-och-analys
+tags=sweden,statistics,choropleth,postgis,scb,kolada
+category=Web
+icon=icon.png
+changelog=1.0 - Första publika versionen: sök, fasettfilter som begränsar varandra,
+     choropleth-lager för kommun, län, DeSO, RegSO och valdistrikt, skolenheter som
+     punktlager och import av egna analysresultat.
+experimental=False
+deprecated=False

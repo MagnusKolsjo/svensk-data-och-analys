@@ -1,0 +1,118 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later
+   Copyright (C) 2026 Magnus Kolsjö
+   Tema-medveten: ljust och mörkt läge via prefers-color-scheme. Alla färger
+   går via variabler så inget blir oläsbart (dark-on-dark) i Office mörkt läge. */
+:root {
+  --bg: #ffffff;
+  --text: #1f2937;
+  --muted: #6b7280;
+  --kant: #e5e7eb;
+  --gra: #f3f4f6;
+  --falt-bg: #ffffff;
+  --bla: #0b57a4;
+  --bla-text: #ffffff;
+  --fot-bg: #ffffff;
+  --over: #b91c1c;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1f1f1f;
+    --text: #e8eaed;
+    --muted: #a0a6b0;
+    --kant: #3a3a3f;
+    --gra: #2c2c30;
+    --falt-bg: #262629;
+    --bla: #4ea0ec;
+    --bla-text: #08233f;
+    --fot-bg: #1f1f1f;
+    --over: #f87171;
+  }
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--bg);
+  padding: 12px;
+}
+header h1 { font-size: 15px; margin: 0 0 2px; color: var(--bla); }
+.underrubrik { margin: 0 0 12px; color: var(--muted); font-size: 12px; }
+
+.sokrad { display: flex; gap: 6px; }
+#fraga {
+  flex: 1; padding: 8px 10px; border: 1px solid var(--kant);
+  border-radius: 6px; font-size: 13px; background: var(--falt-bg); color: var(--text);
+}
+#fraga::placeholder { color: var(--muted); }
+#fraga:focus { outline: 2px solid var(--bla); border-color: var(--bla); }
+#sokKnapp {
+  padding: 8px 14px; background: var(--bla); color: var(--bla-text); border: 0;
+  border-radius: 6px; cursor: pointer; font-weight: 600;
+}
+#sokKnapp:hover { filter: brightness(1.08); }
+
+#filterPanel { margin-top: 8px; }
+#filterPanel summary { cursor: pointer; color: var(--muted); font-size: 12px; }
+.filterrad { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.filterrad label { display: flex; flex-direction: column; gap: 2px; font-size: 11px; color: var(--muted); flex: 1; }
+.filterrad select, .dim-kontroller select, .dim-sok {
+  background: var(--falt-bg); color: var(--text); border: 1px solid var(--kant);
+  border-radius: 5px; font-size: 12px;
+}
+.filterrad select { padding: 5px; }
+.skolfilter { display: none; }
+.skolfilter.synlig { display: flex; }
+
+.status { color: var(--muted); font-size: 12px; margin: 12px 0 6px; min-height: 16px; }
+#traffar { list-style: none; margin: 0; padding: 0; }
+.traff {
+  border: 1px solid var(--kant); border-radius: 8px; padding: 10px;
+  margin-bottom: 8px; background: var(--falt-bg);
+}
+.traff-topp { display: flex; justify-content: space-between; align-items: start; gap: 8px; }
+.traff-namn { font-weight: 600; }
+.traff-besk { color: var(--muted); font-size: 12px; margin-top: 2px; }
+.badge {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .03em;
+  background: var(--gra); color: var(--muted); padding: 2px 6px;
+  border-radius: 4px; white-space: nowrap;
+}
+.traff-knappar { margin-top: 8px; display: flex; gap: 6px; }
+.infoga, .formel {
+  padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 12px;
+  border: 1px solid var(--bla); background: var(--bla); color: var(--bla-text);
+}
+.formel { background: transparent; color: var(--bla); }
+.infoga:hover { filter: brightness(1.08); }
+.formel:hover { background: var(--gra); }
+button:disabled { opacity: .55; cursor: not-allowed; }
+footer { margin-top: 14px; color: var(--muted); }
+footer code { background: var(--gra); padding: 1px 4px; border-radius: 3px; color: var(--text); }
+
+/* SCB-dimensionsval */
+.dim-vy { margin-top: 8px; }
+.dim-topp { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.lank { background: none; border: 0; color: var(--bla); cursor: pointer; padding: 0; font-size: 13px; }
+.dim-tabell { font-weight: 600; font-size: 13px; color: var(--text); }
+.dim-falt { border: 1px solid var(--kant); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; background: var(--falt-bg); }
+.dim-falt > .dim-namn { font-weight: 600; font-size: 12px; display: flex; justify-content: space-between; color: var(--text); }
+.dim-falt .dim-meta { color: var(--muted); font-weight: 400; font-size: 11px; }
+.dim-kontroller { margin-top: 6px; display: flex; flex-direction: column; gap: 5px; }
+.dim-kontroller select[multiple] { width: 100%; min-height: 84px; }
+.dim-knapprad { display: flex; gap: 6px; flex-wrap: wrap; }
+.dim-knapprad button { font-size: 11px; padding: 3px 8px; border: 1px solid var(--kant); background: var(--gra); color: var(--text); border-radius: 4px; cursor: pointer; }
+.dim-totalt { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text); margin-top: 6px; }
+.dim-typ { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text); margin-bottom: 4px; }
+.dim-typ select { flex: 1; background: var(--falt-bg); color: var(--text); border: 1px solid var(--kant); border-radius: 5px; padding: 4px; font-size: 12px; }
+.dim-sok { width: 100%; padding: 5px 8px; }
+.dim-sok::placeholder { color: var(--muted); }
+.dim-fot {
+  position: sticky; bottom: 0; background: var(--fot-bg); padding: 10px 0;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px; border-top: 1px solid var(--kant);
+}
+.dim-celler { font-size: 12px; color: var(--muted); }
+.dim-celler.over { color: var(--over); font-weight: 600; }

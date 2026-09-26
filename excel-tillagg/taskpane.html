@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<!--
+  SPDX-License-Identifier: AGPL-3.0-or-later
+  Copyright (C) 2026 Magnus Kolsjö
+  Sidopanel: sök i datakällorna, filtrera på fasetter, infoga i bladet.
+-->
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Svensk data och analys</title>
+  <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+  <link rel="stylesheet" href="taskpane.css" />
+</head>
+<body>
+  <header>
+    <h1>Svensk data och analys</h1>
+    <p class="underrubrik">Sök officiell statistik och geodata — infoga direkt i bladet.</p>
+  </header>
+
+  <section class="sok">
+    <div class="sokrad">
+      <input id="fraga" type="search" placeholder="Sök, t.ex. arbetslöshet, styrränta, gymnasium göteborg…" autocomplete="off" />
+      <button id="sokKnapp" title="Sök">Sök</button>
+    </div>
+
+    <details id="filterPanel">
+      <summary>Filter</summary>
+      <div class="filterrad">
+        <label>Ämne
+          <select id="amneFilter">
+            <option value="">Alla ämnen</option>
+          </select>
+        </label>
+        <label>Källa (håll Cmd för flera)
+          <select id="kallaFilter" multiple size="5"></select>
+        </label>
+      </div>
+      <div class="filterrad skolfilter">
+        <label>Skolform
+          <select id="skolformFilter"><option value="">Alla</option></select>
+        </label>
+        <label>Huvudman
+          <select id="huvudmanFilter"><option value="">Alla</option></select>
+        </label>
+      </div>
+    </details>
+  </section>
+
+  <section class="resultat">
+    <p id="status" class="status"></p>
+    <ul id="traffar"></ul>
+  </section>
+
+  <!-- SCB-dimensionsval: visas när man valt en SCB-tabell -->
+  <section id="dimVy" class="dim-vy" hidden>
+    <div class="dim-topp">
+      <button id="dimTillbaka" class="lank" title="Tillbaka till träffar">‹ Tillbaka</button>
+      <span id="dimTabell" class="dim-tabell"></span>
+    </div>
+    <div id="dimFalt"></div>
+    <div class="dim-fot">
+      <span id="dimCeller" class="dim-celler"></span>
+      <button id="dimInfoga" class="infoga">Infoga data</button>
+    </div>
+  </section>
+
+  <footer>
+    <small>Klicka <strong>Infoga</strong> för att skriva data till bladet, eller använd funktionerna <code>=DOA.SOK()</code> och <code>=DOA.HAMTA()</code>.</small>
+  </footer>
+
+  <script src="taskpane.js"></script>
+</body>
+</html>

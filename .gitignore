@@ -1,0 +1,30 @@
+# Hemligheter — checkas aldrig in
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# Lokal cache och stora geodatafiler
+# .cache/ håller nedladdade källfiler — EEA:s kustlinje är ensam 48 MB
+# och hämtas om av cli/synka_kustlinje.py när den behövs.
+.cache/
+*.db
+*.sqlite
+*.sqlite3
+*.gpkg
+
+# Synkloggar — en fil per dag, skrivs av synk/daglig_synk.sh
+logs/
+
+# macOS
+.DS_Store
+
+# Self-signed localhost-cert för Office-tillägget (genereras lokalt)
+certs/
+
+# Byggda paket — QGIS-pluginet byggs med qgis-plugin/bygg.sh
+qgis-plugin/*.zip
