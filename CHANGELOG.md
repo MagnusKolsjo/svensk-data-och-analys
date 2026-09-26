@@ -5,6 +5,11 @@ och versionerna följer [semantisk versionshantering](https://semver.org/lang/sv
 
 ## [Unreleased]
 
+### Tillagt
+
+- `CONTRIBUTING.md` med regler för bidrag, och `AGENTS.md` med anvisningar
+  för AI-kodagenter.
+
 ## [1.0.0] - 2026-09-26
 
 ### Tillagt

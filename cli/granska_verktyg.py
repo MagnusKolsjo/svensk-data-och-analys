@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Magnus Kolsjö
 """Granskar verktygsmetadata över hela doa-suiten.
 
-Ett svep över drygt hundra verktyg i elva filer går inte att kontrollera
+Ett svep över drygt hundra verktyg i tolv filer går inte att kontrollera
 för hand.
 Skriptet laddar varje MCP-server, kör `list_tools()` och kontrollerar det
 som annars tyst faller bort: verktyg utan `title`, utan `annotations`, utan

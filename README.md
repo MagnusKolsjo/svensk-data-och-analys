@@ -293,6 +293,12 @@ data. Bristerna är mätta, inte antagna. Sviten redovisar en brist och döljer
 den inte: poster som inte går att använda märks, och antalet följer med i
 svaret. Hål fylls aldrig med gissade värden.
 
+## Bidra
+
+Bidrag är välkomna. Läs [CONTRIBUTING.md](CONTRIBUTING.md) innan du skickar
+en pull request, och öppna gärna ett ärende först för större ändringar.
+AI-kodagenter hittar sina anvisningar i [AGENTS.md](AGENTS.md).
+
 ## Licens
 
 Koden är licensierad under **AGPL-3.0-or-later**.
