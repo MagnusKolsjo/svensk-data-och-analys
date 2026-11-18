@@ -78,7 +78,7 @@ async def livstid(app: FastAPI):
     logger.info("doa-api stängs")
 
 
-VERSION = "1.0.0"
+VERSION = "1.0.1"
 
 app = FastAPI(
     title="svensk-data-och-analys — Excel/Power Query API",

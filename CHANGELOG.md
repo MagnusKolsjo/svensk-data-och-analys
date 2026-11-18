@@ -5,10 +5,21 @@ och versionerna följer [semantisk versionshantering](https://semver.org/lang/sv
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-11-18
+
 ### Tillagt
 
 - `CONTRIBUTING.md` med regler för bidrag, och `AGENTS.md` med anvisningar
   för AI-kodagenter.
+- Varning när en nyckel står flera gånger i `.env` med olika värden. Det
+  sista värdet gäller, så en tom rad längre ner släcker en ifylld utan att
+  något märks. Varningen anger radnummer, aldrig värden.
+
+### Ändrat
+
+- Den schemalagda synken skiljer på en adressvariabel som saknas, som står
+  tom och som skrivs över av en senare tom rad, i stället för att alltid be
+  om att adressen ska anges.
 
 ## [1.0.0] - 2026-09-26
 

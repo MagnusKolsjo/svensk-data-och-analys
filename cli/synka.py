@@ -60,6 +60,20 @@ STANDARD_ETIKETT = "com.magnuskolsjo.doa-synk"
 # Steg 1 — källor som bytt fil
 # ---------------------------------------------------------------------------
 
+def _varfor_ingen_adress(url_env: str | None) -> str:
+    """Skiljer på en variabel som saknas, en som står tom och en som skrivs
+    över av en senare tom rad. Bara den första kräver att något fylls i;
+    de andra två har en adress som inte når fram."""
+    if not url_env:
+        return "källan har ingen adressvariabel"
+    dubbel = konfig.dubbla_nycklar().get(url_env)
+    if dubbel:
+        return konfig.beskriv_dubbel(url_env, dubbel)
+    if url_env in os.environ:
+        return f"{url_env} står tom i .env — fyll i adressen, så synkar nästa körning därifrån"
+    return f"{url_env} saknas i .env — lägg till den med adressen, så synkar nästa körning därifrån"
+
+
 async def _kor_synk(synk_id: str, url: str | None, visa: bool, fel: list[str]) -> None:
     if visa:
         return
@@ -99,7 +113,7 @@ async def steg_kallor(visa: bool) -> list[str]:
             continue
         url = synk.los_url(synk_id)
         if not url:
-            logger.warning("%s: bevakas inte — ange adressen i %s, så synkar nästa körning därifrån", synk_id, s.url_env)
+            logger.warning("%s: bevakas inte — %s", synk_id, _varfor_ingen_adress(s.url_env))
             continue
         logger.info("%s: ingen signatur än — synkar från %s så att bevakningen kan börja",
                     synk_id, s.url_env or "standardadressen")
