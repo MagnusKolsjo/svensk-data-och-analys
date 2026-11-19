@@ -43,6 +43,10 @@ Se `README.md` för helheten.
   aldrig maskerade värden som nollor. Se `DATAKVALITET.md`.
 - **Hemligheter** kommer ur `.env` med prefixet `DOA_`. Läs, skriv eller
   checka aldrig in `.env`.
+- **Adresser utifrån kontrolleras.** En HTTP-klient som hämtar en adress ur
+  ett anrop, en katalog eller en distribution skapas med
+  `adresskontroll.klient()` i stället för `httpx.AsyncClient()`, så att
+  den inte når interna nät.
 - **Leverantörsoberoende texter.** Beskriv servrarna för "en MCP-klient",
   inte för en viss AI-produkt.
 - **Ange dig inte som medförfattare.** Inga `Co-Authored-By`-rader eller

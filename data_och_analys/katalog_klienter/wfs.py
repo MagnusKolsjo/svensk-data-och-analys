@@ -42,6 +42,8 @@ from urllib.parse import parse_qsl, urlparse
 
 import httpx
 
+from data_och_analys.infra import adresskontroll
+
 logger = logging.getLogger(__name__)
 
 
@@ -207,7 +209,7 @@ async def _hamta(
     parametrar.setdefault("version", instans.version)
     for nyckel, varde in instans.fasta_parametrar:
         parametrar.setdefault(nyckel, varde)
-    async with httpx.AsyncClient(
+    async with adresskontroll.klient(
         timeout=timeout,
         headers={"User-Agent": USER_AGENT, "Accept": accept},
     ) as klient:

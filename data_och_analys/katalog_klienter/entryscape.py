@@ -38,6 +38,7 @@ from urllib.parse import quote
 
 import httpx
 
+from data_och_analys.infra import adresskontroll
 from data_och_analys.oppnadata import dcat_modell
 
 logger = logging.getLogger(__name__)
@@ -54,7 +55,7 @@ ROWSTORE_MAX_PER_ANROP = 100
 # ---------------------------------------------------------------------------
 
 async def _hamta_json(url: str) -> Any:
-    async with httpx.AsyncClient(timeout=_TIMEOUT, follow_redirects=True,
+    async with adresskontroll.klient(timeout=_TIMEOUT, follow_redirects=True,
                                  headers={"User-Agent": USER_AGENT,
                                           "Accept": "application/json"}) as klient:
         svar = await klient.get(url)
@@ -190,7 +191,7 @@ async def rowstore_rader(url: str, filter: dict[str, str] | None = None,
     namn = _ORIGINALNAMN.get(bas, {})
     parametrar = {namn.get(k, k): v for k, v in (filter or {}).items()}
     parametrar.update({"_limit": min(limit, ROWSTORE_MAX_PER_ANROP), "_offset": offset})
-    async with httpx.AsyncClient(timeout=_TIMEOUT, follow_redirects=True,
+    async with adresskontroll.klient(timeout=_TIMEOUT, follow_redirects=True,
                                  headers={"User-Agent": USER_AGENT}) as klient:
         svar = await klient.get(bas + "/json", params=parametrar)
     if svar.status_code >= 400:

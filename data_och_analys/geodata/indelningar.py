@@ -37,7 +37,7 @@ from typing import Iterable
 
 import httpx
 
-from data_och_analys.infra import db, framsteg
+from data_och_analys.infra import adresskontroll, db, framsteg
 from data_och_analys.katalog_klienter import huwise
 
 logger = logging.getLogger(__name__)
@@ -399,7 +399,7 @@ async def _hamta_xlsx(url: str) -> bytes:
             "AppleWebKit/605.1.15 svensk-data-och-analys"
         )
     }
-    async with httpx.AsyncClient(timeout=60.0, headers=headers) as klient:
+    async with adresskontroll.klient(timeout=60.0, headers=headers) as klient:
         svar = await klient.get(url)
     svar.raise_for_status()
     return svar.content

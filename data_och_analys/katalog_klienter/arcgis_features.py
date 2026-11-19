@@ -53,6 +53,8 @@ from urllib.parse import urlparse
 
 import httpx
 
+from data_och_analys.infra import adresskontroll
+
 logger = logging.getLogger(__name__)
 
 
@@ -142,7 +144,7 @@ async def _hamta_json(
 ) -> Any:
     params = {"f": "json", **(parametrar or {})}
     url = f"{instans.bas_url}/{sokvag.lstrip('/')}"
-    async with httpx.AsyncClient(
+    async with adresskontroll.klient(
         timeout=timeout, headers={"User-Agent": USER_AGENT}
     ) as klient:
         svar = await klient.get(url, params=params)

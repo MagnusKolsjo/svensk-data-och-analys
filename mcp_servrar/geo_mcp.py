@@ -414,6 +414,7 @@ async def geo_synka_skr_kommungrupp(
 
     Saknas alla tre kastas ValueError. Returnerar antalet skrivna rader.
     """
+    synk.godkann_url("skr_kommungrupp", url)
     antal = await indelningar.synka_skr_kommungrupp(
         rader=rader, ar=ar, url=url
     )
@@ -444,6 +445,7 @@ async def geo_synka_tillvaxtverket_fa_region(
     `kommun`-tabellen från filen — gratis bieffekt eftersom källan
     listar alla kommuner.
     """
+    synk.godkann_url("tillvaxtverket_fa", url)
     antal = await indelningar.synka_tillvaxtverket_fa_region(
         rader=rader, ar=ar, url=url, seeda_kommuner=seeda_kommuner
     )
@@ -480,6 +482,7 @@ async def geo_synka_tillvaxtverket_kommuntyper(
     `kommun`- och `lan`-tabellerna samtidigt — bekvämt eftersom filen
     bär Län kod, Län namn, Kommunkod och Kommunnamn för alla 290.
     """
+    synk.godkann_url("tillvaxtverket_kommuntyper", url)
     antal = await indelningar.synka_tillvaxtverket_kommuntyper(
         niva=niva,
         rader=rader,
@@ -581,6 +584,7 @@ async def geo_synka_deso_och_regso(
 
     Returnerar `{"antal_deso": ..., "antal_regso": ...}`.
     """
+    synk.godkann_url("deso_och_regso", url)
     resultat = await indelningar.synka_deso_och_regso(url=url, ar=ar)
     await synk.journalfor("deso_och_regso", url, resultat)
     return resultat
@@ -627,6 +631,7 @@ async def geo_synka_valdistrikt(
     Returnerar `{antal_valdistrikt, antal_kommunvalkretsar,
     antal_regionvalkretsar}`.
     """
+    synk.godkann_url("valdistrikt", url)
     resultat = await indelningar.synka_valdistrikt(url=url, ar=ar)
     await synk.journalfor("valdistrikt", url, resultat)
     return resultat
@@ -798,6 +803,7 @@ async def geo_synka_kommun_folkmangd(
     Returnerar `{rader_skrivna, kommuner_matchade, fran_ar, till_ar,
     indelning_ar, kommuner_omatchade: [namn där matchning misslyckades]}`.
     """
+    synk.godkann_url("kommun_folkmangd", url)
     res = await folkmangd.synka_kommun_folkmangd(
         url=url, indelning_ar=indelning_ar
     )
@@ -835,6 +841,7 @@ async def geo_synka_valdistrikt_geom(
 
     Returnerar `{"antal_skrivna": N}`.
     """
+    synk.godkann_url("valdistrikt_geom", url)
     n = await geometrier.synka_valdistrikt_geom(
         url=url, ar=ar, kalla_crs=kalla_crs,
         rapportera=framsteg.fran_context(ctx),

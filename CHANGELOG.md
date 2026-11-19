@@ -5,6 +5,35 @@ och versionerna följer [semantisk versionshantering](https://semver.org/lang/sv
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-11-19
+
+### Säkerhet
+
+- Adresser som hämtas på uppdrag av en anropare når bara publika nät.
+  Privata nät, loopback, länklokala adresser och molnleverantörers
+  metadatatjänster avvisas, även efter en omdirigering. Prövningen sitter
+  i anslutningen, som går till den adress som prövades, så att en
+  namnserver som byter svar inte kommer förbi. Egna interna värdar kan
+  tillåtas med `DOA_TILLATNA_INTERNA_VARDAR`.
+- Geo-synkarna godtar en adress i anropet bara om den är https och ligger
+  hos källans egen myndighet. Adressen sparas som bevakad källa, så en
+  främmande adress hade annars hämtats varje natt.
+- ZIP-baserade filer (zip, xlsx, ods) avvisas om innehållet packas upp över
+  1 GB.
+- DCAT-filer med dokumenttypsdeklaration tolkas inte, JSON-LD-kontexter
+  prövas innan rdflib hämtar dem, en katalogsida får vara högst 100 MB och
+  nästa sida följs bara på katalogens egen värd.
+- Kartläggningen för inte in plattformar som bara svarade utan
+  certifikatkontroll i katalogregistret, och tar bort sådana som förts in
+  tidigare. De redovisas fortfarande i rapporten.
+
+### Rättat
+
+- En ny årgång som synkats med en adress i verktygsanropet backades varje
+  natt till den äldre adressen i `.env`. Adressen i `.env` vid synken
+  sparas nu i `kallsignatur.env_url`, och den schemalagda synken byter
+  källa bara när `.env` faktiskt ändrats.
+
 ## [1.0.1] - 2026-11-18
 
 ### Tillagt

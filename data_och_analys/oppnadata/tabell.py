@@ -40,7 +40,7 @@ from typing import Any
 import httpx
 import pandas as pd
 
-from data_och_analys.infra import mellanlager
+from data_och_analys.infra import adresskontroll, mellanlager
 from data_och_analys.katalog_klienter import arcgis_features, ckan, entryscape, huwise, wfs
 from data_och_analys.katalog_klienter import ogc_api_features as oafeat
 from data_och_analys.oppnadata.hamtningsvag import Hamtningsvag
@@ -49,6 +49,10 @@ logger = logging.getLogger(__name__)
 
 USER_AGENT = "svensk-data-och-analys/Oppnadata (DCAT-AP-SE; +https://github.com/)"
 MAX_FILSTORLEK = 300 * 1024 * 1024
+# Uppackat innehåll i ZIP-baserade filer (zip, xlsx, ods). En liten fil kan
+# packas upp till gigabyte; taket gäller summan av de deklarerade
+# storlekarna, som Pythons zipfile också håller läsningen till.
+MAX_UPPACKAD = 1024 * 1024 * 1024
 # Rowstore ger hundra rader per anrop. Över taket är filerna rätt väg;
 # de finns nästan alltid som en annan distribution av samma datamängd.
 ROWSTORE_MAX_RADER = 20_000
@@ -72,7 +76,7 @@ async def hamta_fil(url: str) -> tuple[bytes, str]:
     lagrad = await mellanlager.las_original(url)
     if lagrad:
         return lagrad
-    async with httpx.AsyncClient(timeout=httpx.Timeout(300.0, connect=15.0), follow_redirects=True,
+    async with adresskontroll.klient(timeout=httpx.Timeout(300.0, connect=15.0), follow_redirects=True,
                                  headers={"User-Agent": USER_AGENT}) as klient:
         async with klient.stream("GET", url) as svar:
             if svar.status_code >= 400:
@@ -167,6 +171,17 @@ def _rubrikrad(rader: pd.DataFrame) -> int:
     return 0
 
 
+def _kontrollera_zip(innehall: bytes) -> None:
+    """Avvisar en ZIP-baserad fil vars innehåll packas upp över taket."""
+    if not zipfile.is_zipfile(io.BytesIO(innehall)):
+        return
+    with zipfile.ZipFile(io.BytesIO(innehall)) as z:
+        uppackad = sum(i.file_size for i in z.infolist())
+    if uppackad > MAX_UPPACKAD:
+        raise ValueError(f"Filen packas upp till {uppackad // 2**20} MB, "
+                         f"över taket på {MAX_UPPACKAD // 2**20} MB")
+
+
 def _tolka_kalkylark(innehall: bytes, format_: str, blad: str | None) -> tuple[pd.DataFrame, list[str]]:
     motor = {"xls": "xlrd", "ods": "odf"}.get(format_, "openpyxl")
     alla = pd.read_excel(io.BytesIO(innehall), sheet_name=None, header=None, dtype=str, engine=motor)
@@ -242,12 +257,14 @@ def tolka(innehall: bytes, innehallstyp: str = "", format_: str = "", url: str =
         df, overhoppade = _tolka_csv(_avkoda(innehall))
         return df, [], overhoppade
     if fmt in ("xlsx", "xls", "ods"):
+        _kontrollera_zip(innehall)
         return (*_tolka_kalkylark(innehall, fmt, blad), 0)
     if fmt in ("json", "geojson"):
         return _tolka_json(innehall), [], 0
     if fmt in ("gpkg", "kml"):
         return _tolka_geofil(innehall), [], 0
     if fmt in ("zip", "shp"):
+        _kontrollera_zip(innehall)
         with zipfile.ZipFile(io.BytesIO(innehall)) as z:
             namn = [n for n in z.namelist() if not n.endswith("/")]
             if any(n.lower().endswith(".shp") for n in namn):
@@ -374,7 +391,7 @@ async def _ckan_tabell(vag: Hamtningsvag, max_rader: int) -> Tabell:
 async def _arcgis_lager(url: str) -> list[tuple[int, str]]:
     tjanst = re.sub(r"/\d+/?$", "", url.split("?")[0])
     try:
-        async with httpx.AsyncClient(timeout=30, headers={"User-Agent": USER_AGENT}) as klient:
+        async with adresskontroll.klient(timeout=30, headers={"User-Agent": USER_AGENT}) as klient:
             d = (await klient.get(tjanst, params={"f": "json"})).json()
     except (httpx.HTTPError, ValueError):
         return []

@@ -273,6 +273,15 @@ Transport väljs med `DOA_MCP_TRANSPORT`. Standard är `stdio`. Med `http`
 lyssnar servern på `DOA_MCP_HOST:DOA_MCP_PORT` och kräver en Bearer-token i
 `DOA_MCP_API_KEY`. Saknas token startar servern inte.
 
+Verktygen hämtar från adresser som anroparen anger eller som står i okända
+kataloger. Sådana adresser hämtas bara om de leder till publika nät;
+privata nät, loopback och molnleverantörers metadatatjänster avvisas, även
+efter en omdirigering. Kontrollen sitter i anslutningen: namnet slås upp en
+gång och anslutningen går till den adress som prövades, så en namnserver
+som byter svar mellan prövning och anslutning kommer inte förbi. Körs
+servrarna på en delad server är en brandväggsregel som stänger utgående
+trafik till interna nät ändå ett bra andra skydd.
+
 ### REST-API, Excel och QGIS
 
 ```bash

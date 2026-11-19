@@ -39,7 +39,7 @@ from typing import Any
 import httpx
 import openpyxl
 
-from data_och_analys.infra import db
+from data_och_analys.infra import adresskontroll, db
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +78,7 @@ class SynkResultat:
 
 async def _hamta_excel(url: str) -> bytes:
     """Laddar ner Excel-filen från SCB."""
-    async with httpx.AsyncClient(
+    async with adresskontroll.klient(
         timeout=httpx.Timeout(60.0, connect=15.0),
         headers={"User-Agent": USER_AGENT},
         follow_redirects=True,

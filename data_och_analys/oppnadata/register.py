@@ -11,6 +11,7 @@ Ingångspunkter:
     Katalog
     spara(kataloger) -> int
     ta_bort_utom(kategori, nycklar) -> int
+    ta_bort_plattformar(nycklar) -> int
     las(kategori, lan_kod, namn, plattform) -> list[Katalog]
 """
 
@@ -79,6 +80,26 @@ async def ta_bort_utom(kategori: str, nycklar: set[str]) -> int:
             await anslutning.execute(
                 f"DELETE FROM {db.prefix()}datakatalog WHERE org_nyckel = {db.ph(1)}", nyckel)
     return len(borta)
+
+
+async def ta_bort_plattformar(nycklar: set[tuple[str, str, str]]) -> int:
+    """Tar bort rader för givna `(org_nyckel, plattform, bas_url)`, alla kontexter.
+
+    För plattformar som kartläggningen vet inte ska stå kvar, till exempel
+    sådana som bara svarar utan certifikatkontroll. Att de inte svarade är
+    inte skäl nog — då lämnas raden orörd, som `spara` beskriver.
+    """
+    if not nycklar:
+        return 0
+    antal = 0
+    async with db.hamta_db() as anslutning:
+        for org, plattform, bas in sorted(nycklar):
+            rader = await anslutning.fetch(
+                f"DELETE FROM {db.prefix()}datakatalog WHERE org_nyckel = {db.ph(1)} "
+                f"AND plattform = {db.ph(2)} AND bas_url = {db.ph(3)} RETURNING org_nyckel",
+                org, plattform, bas)
+            antal += len(rader)
+    return antal
 
 
 async def las(kategori: str | None = None, lan_kod: str | None = None,

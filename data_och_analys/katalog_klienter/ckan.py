@@ -26,6 +26,7 @@ from typing import Any
 
 import httpx
 
+from data_och_analys.infra import adresskontroll
 from data_och_analys.oppnadata.dcat_modell import (
     Datamangd, Datatjanst, Distribution, Fillank, Utgivare,
 )
@@ -39,7 +40,7 @@ DATASTORE_MAX_PER_ANROP = 1000
 
 async def _action(bas_url: str, action: str, parametrar: dict[str, Any]) -> Any:
     url = f"{bas_url.rstrip('/')}/api/3/action/{action}"
-    async with httpx.AsyncClient(timeout=_TIMEOUT, follow_redirects=True,
+    async with adresskontroll.klient(timeout=_TIMEOUT, follow_redirects=True,
                                  headers={"User-Agent": USER_AGENT}) as klient:
         svar = await klient.get(url, params=parametrar)
     try:

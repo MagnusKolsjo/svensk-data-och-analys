@@ -64,7 +64,7 @@ import httpx
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from data_och_analys.geodata import synkstatus
-from data_och_analys.infra import db, konfig
+from data_och_analys.infra import adresskontroll, db, konfig
 from data_och_analys.klienter import myndighetsregister
 from data_och_analys.oppnadata import register
 
@@ -273,16 +273,17 @@ class Hamtare:
 
     Ett ogiltigt certifikat är vanligt på kommunala underdomäner. Då görs ett
     nytt försök utan verifiering så att tjänsten ändå kan identifieras, och
-    bristen redovisas i stället för att värden tyst räknas som död.
+    bristen redovisas i stället för att värden tyst räknas som död. Sådana
+    svar blir aldrig registerrader (se `registerrader`).
     """
 
     def __init__(self) -> None:
         begr = httpx.Limits(max_connections=MAX_SAMTIDIGA * 2)
         tid = httpx.Timeout(15.0, connect=7.0)
         huvud = {"User-Agent": USER_AGENT, "Accept-Language": "sv,en;q=0.5"}
-        self._klient = httpx.AsyncClient(
+        self._klient = adresskontroll.klient(
             follow_redirects=True, timeout=tid, limits=begr, headers=huvud)
-        self._osaker = httpx.AsyncClient(
+        self._osaker = adresskontroll.klient(
             follow_redirects=True, timeout=tid, limits=begr, headers=huvud, verify=False)
         self._global = asyncio.Semaphore(MAX_SAMTIDIGA)
         self._per_vard: dict[str, asyncio.Semaphore] = defaultdict(
@@ -974,6 +975,23 @@ REGISTERPLATTFORM = {"EntryScape": "entryscape", "CKAN": "ckan",
                      "Huwise": "huwise", "ArcGIS Hub": "arcgis_hub"}
 
 
+def _plattformsnyckel(f: Fynd) -> tuple[str, str, str]:
+    p = urlparse(f.api or f.slutlig_url)
+    return (f.org, REGISTERPLATTFORM[f.typ], f"{p.scheme}://{p.hostname}")
+
+
+def overifierade(fynd: list[Fynd], rader: list[register.Katalog]) -> set[tuple[str, str, str]]:
+    """Plattformar som bara svarade utan certifikatkontroll och därför ska ur registret.
+
+    En rad som förts in före kontrollen fanns blir annars kvar, eftersom
+    registret uppdateras och aldrig töms. En plattform som också svarade med
+    giltigt certifikat i samma körning står kvar.
+    """
+    giltiga = {(k.org_nyckel, k.plattform, k.bas_url) for k in rader}
+    return {_plattformsnyckel(f) for f in fynd
+            if f.typ in REGISTERPLATTFORM and f.belagg == "API svarar" and f.ogiltigt_cert} - giltiga
+
+
 def registerrader(orgs: list[Organisation], fynd: list[Fynd],
                   fed: list[Federerad]) -> list[register.Katalog]:
     """Det som ska sökas i: kataloger som svarade, inte det som en gång anmälts.
@@ -982,6 +1000,11 @@ def registerrader(orgs: list[Organisation], fynd: list[Fynd],
     instanserna — EntryScape Free och dataportalens registreringstjänst — och
     levande DCAT-filer kommer ur federationen, och bara när senaste
     skördningen lyckades och katalogen inte var tom.
+
+    En plattform som bara svarade utan certifikatkontroll förs inte in. Svaret
+    räcker för att redovisa bristen i rapporten, men inte för att avgöra vem
+    som svarade — och det som står i registret söks och hämtas sedan av
+    verktygen.
     """
     per_nyckel = {o.nyckel: o for o in orgs}
     ut: dict[tuple, register.Katalog] = {}
@@ -999,9 +1022,9 @@ def registerrader(orgs: list[Organisation], fynd: list[Fynd],
 
     for f in fynd:
         o = per_nyckel.get(f.org)
-        if o and f.typ in REGISTERPLATTFORM and f.belagg == "API svarar":
-            p = urlparse(f.api or f.slutlig_url)
-            lagg_till(o, REGISTERPLATTFORM[f.typ], f"{p.scheme}://{p.hostname}",
+        if o and f.typ in REGISTERPLATTFORM and f.belagg == "API svarar" and not f.ogiltigt_cert:
+            _, plattform, bas = _plattformsnyckel(f)
+            lagg_till(o, plattform, bas,
                       antal=f.antal, belagg=f"API svarar ({f.kalla})")
 
     for f in fed:
@@ -1297,6 +1320,9 @@ async def _kor(args: argparse.Namespace) -> int:
             nya_rader = registerrader(orgs, fynd, fed)
             antal = await register.spara(nya_rader)
             print(f"  {antal} kataloger skrivna till registret")
+            overifierat = await register.ta_bort_plattformar(overifierade(fynd, nya_rader))
+            if overifierat:
+                print(f"  {overifierat} kataloger som bara svarar utan giltigt certifikat togs bort ur registret")
             # Organisationslistan är fullständig för de kategorier som körts;
             # med en egen myndighetslista är den det inte för myndigheterna.
             for kategori in {o.kategori for o in orgs}:

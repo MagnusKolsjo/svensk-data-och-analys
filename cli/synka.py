@@ -9,9 +9,10 @@ takten är satt så. Den här körningen gör registret till handling, i tre ste
            dataset — kommunindelning, valdistrikt, klassificeringar — blir
            inaktuellt när källan publicerar, inte när tiden går, och synkas
            om från den kända adressen när signaturen ändrats. En ny årgång
-           på en ny adress läggs in i `.env` (`DOA_*_URL`); skiljer den sig
-           från den bevakade adressen synkas den nya. Källor som ännu inte
-           bevakas redovisas.
+           på en ny adress läggs in i `.env` (`DOA_*_URL`); har adressen där
+           ändrats sedan förra synken synkas den nya. En adress som angetts
+           i ett verktygsanrop behålls tills `.env` ändras. Källor som ännu
+           inte bevakas redovisas.
   takt     Dataset med uppmätt, dokumenterad eller antagen takt synkas när
            åldern passerat takten: skolenheter, postnummer, folkmängd,
            sökindex och katalogregistret.
@@ -90,16 +91,26 @@ async def steg_kallor(visa: bool) -> list[str]:
     korda: set[str] = set()
     kontroller = await bevakning.kontrollera()
     bevakade = {r["dataset"]: r.get("url") for r in kontroller}
+    env_vid_synk = {r["dataset"]: r.get("env_url") for r in kontroller}
 
     # En ny årgång på en ny adress syns inte hos källan — den gamla filen
-    # ligger kvar oförändrad. Adressen i .env är därför det som avgör: skiljer
-    # den sig från den adress signaturen sattes från hämtas den nya.
+    # ligger kvar oförändrad. Adressen i .env är därför det som avgör: har den
+    # ändrats sedan signaturen sattes hämtas den nya. Att den bara skiljer sig
+    # från den bevakade adressen räcker inte — en ny årgång som synkats med en
+    # adress i verktygsanropet skulle då backas till den äldre adressen i
+    # .env varje natt. Signaturer från före env_url-kolumnen saknar värdet och
+    # jämförs med den bevakade adressen.
     for synk_id, s in synk.SYNKAR.items():
         if not s.url_env:
             continue
         ny = os.getenv(s.url_env, "").strip()
         sparade = {bevakade[d] for d in s.dataset if bevakade.get(d)}
-        if not ny or not sparade or sparade == {ny}:
+        if not ny or not sparade or ny in sparade:
+            continue
+        kanda_env = {env_vid_synk.get(d) for d in s.dataset if bevakade.get(d)}
+        if None not in kanda_env and ny in kanda_env:
+            logger.info("%s: bevakas på %s, som angavs vid synken; %s är oförändrad sedan dess",
+                        synk_id, ", ".join(sorted(sparade)), s.url_env)
             continue
         logger.info("%s: ny adress i %s — synkar från den", synk_id, s.url_env)
         korda.add(synk_id)

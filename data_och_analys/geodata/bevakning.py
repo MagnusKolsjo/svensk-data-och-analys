@@ -35,7 +35,7 @@ from typing import Any
 import httpx
 
 from data_och_analys.geodata.synkregister import REGISTER
-from data_och_analys.infra import db
+from data_och_analys.infra import adresskontroll, db
 
 logger = logging.getLogger(__name__)
 
@@ -58,29 +58,34 @@ KANDA_URLER: dict[str, str] = {
 }
 
 
-async def notera_kalla(dataset: str, url: str) -> None:
-    """Sparar källans signatur. Anropas efter en lyckad hämtning."""
+async def notera_kalla(dataset: str, url: str, env_url: str | None = None) -> None:
+    """Sparar källans signatur. Anropas efter en lyckad hämtning.
+
+    `env_url` är adressen i `.env` vid synken. Den sparas separat från
+    `url`, som kan ha kommit ur ett verktygsanrop.
+    """
     sig = await _signatur(url)
     if sig is None:
         return
     async with db.hamta_db() as anslutning:
         await anslutning.execute(
             f"INSERT INTO {db.prefix()}kallsignatur "
-            f"(dataset, url, etag, last_modified, storlek) "
-            f"VALUES ($1, $2, $3, $4, $5) "
+            f"(dataset, url, etag, last_modified, storlek, env_url) "
+            f"VALUES ($1, $2, $3, $4, $5, $6) "
             f"ON CONFLICT (dataset) DO UPDATE SET "
             f"url = EXCLUDED.url, etag = EXCLUDED.etag, "
             f"last_modified = EXCLUDED.last_modified, "
-            f"storlek = EXCLUDED.storlek, senast_kontrollerad = NOW()",
+            f"storlek = EXCLUDED.storlek, env_url = EXCLUDED.env_url, "
+            f"senast_kontrollerad = NOW()",
             dataset, url, sig.get("etag"), sig.get("last_modified"),
-            sig.get("storlek"),
+            sig.get("storlek"), env_url,
         )
 
 
 async def _signatur(url: str) -> dict[str, Any] | None:
     """HEAD:ar en URL och plockar ut det servern uppger om filen."""
     try:
-        async with httpx.AsyncClient(
+        async with adresskontroll.klient(
             timeout=_TIMEOUT, headers={"User-Agent": USER_AGENT},
             follow_redirects=True,
         ) as klient:
@@ -176,7 +181,7 @@ async def kontrollera(dataset: str | None = None) -> list[dict[str, Any]]:
                 namn,
             )
         resultat.append({
-            "dataset": namn, "url": url,
+            "dataset": namn, "url": url, "env_url": gammal.get("env_url"),
             "lage": "ändrad hos källan" if andrat else "oförändrad",
             "andrade_falt": andrat,
             "verktyg": post.verktyg if post else None,

@@ -40,6 +40,8 @@ from urllib.parse import urlparse
 import httpx
 from pydantic import BaseModel, ConfigDict, Field
 
+from data_och_analys.infra import adresskontroll
+
 logger = logging.getLogger(__name__)
 
 
@@ -129,7 +131,7 @@ async def _hamta_json(
 ) -> Any:
     inst = hamta_instans(instans_namn)
     url = f"{inst.bas_url}/api/explore/v2.1/{sokvag.lstrip('/')}"
-    async with httpx.AsyncClient(
+    async with adresskontroll.klient(
         timeout=_TIMEOUT, headers={"User-Agent": USER_AGENT}
     ) as klient:
         svar = await klient.get(url, params=parametrar)
@@ -148,7 +150,7 @@ async def _hamta_bytes(
 ) -> bytes:
     inst = hamta_instans(instans_namn)
     url = f"{inst.bas_url}/api/explore/v2.1/{sokvag.lstrip('/')}"
-    async with httpx.AsyncClient(
+    async with adresskontroll.klient(
         timeout=300.0, headers={"User-Agent": USER_AGENT}
     ) as klient:
         svar = await klient.get(url, params=parametrar)

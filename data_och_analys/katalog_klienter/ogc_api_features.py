@@ -55,6 +55,8 @@ from urllib.parse import urlparse
 
 import httpx
 
+from data_och_analys.infra import adresskontroll
+
 logger = logging.getLogger(__name__)
 
 
@@ -320,7 +322,7 @@ async def _hamta_json(
     forsta_forsok = True
     while True:
         headers = await _bygg_headers(instans, accept)
-        async with httpx.AsyncClient(timeout=timeout, headers=headers) as klient:
+        async with adresskontroll.klient(timeout=timeout, headers=headers) as klient:
             svar = await klient.get(url, params=parametrar)
         if (
             svar.status_code in (401, 403)
@@ -442,7 +444,7 @@ async def stroma_alla_items(
         parametrar["bbox"] = ",".join(str(x) for x in bbox)
     url = f"{inst.bas_url}/collections/{collection_id}/items"
 
-    async with httpx.AsyncClient(timeout=_LANG_TIMEOUT) as klient:
+    async with adresskontroll.klient(timeout=_LANG_TIMEOUT) as klient:
         while url:
             forsta_forsok = True
             while True:

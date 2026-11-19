@@ -41,7 +41,7 @@ from typing import Iterator
 import httpx
 import ijson
 
-from data_och_analys.infra import db, framsteg
+from data_och_analys.infra import adresskontroll, db, framsteg
 from data_och_analys.katalog_klienter import ogc_api_features, wfs
 
 logger = logging.getLogger(__name__)
@@ -69,7 +69,7 @@ _LANG_TIMEOUT = httpx.Timeout(600.0, connect=30.0)
 
 async def _hamta_bytes(url: str) -> bytes:
     """GET med browser-User-Agent och lång timeout för stora geo-filer."""
-    async with httpx.AsyncClient(
+    async with adresskontroll.klient(
         timeout=_LANG_TIMEOUT, headers={"User-Agent": USER_AGENT}
     ) as klient:
         svar = await klient.get(url)

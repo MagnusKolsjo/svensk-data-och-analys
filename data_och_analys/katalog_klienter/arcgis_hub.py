@@ -30,6 +30,7 @@ from typing import Any
 
 import httpx
 
+from data_och_analys.infra import adresskontroll
 from data_och_analys.oppnadata.dcat_modell import (
     Datamangd, Datatjanst, Distribution, Fillank, Utgivare,
 )
@@ -43,7 +44,7 @@ _TJANSTTYPER = ("Feature Service", "Map Service")
 
 
 async def _hamta_json(url: str, parametrar: dict[str, Any] | None = None) -> Any:
-    async with httpx.AsyncClient(timeout=_TIMEOUT, follow_redirects=True,
+    async with adresskontroll.klient(timeout=_TIMEOUT, follow_redirects=True,
                                  headers={"User-Agent": USER_AGENT}) as klient:
         svar = await klient.get(url, params=parametrar)
     if svar.status_code >= 400:

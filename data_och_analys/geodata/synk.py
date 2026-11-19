@@ -14,11 +14,18 @@ standardadress i koden. Myndigheter som byter adress vid varje publicering
 — SKR, Tillväxtverket, val.se — har ingen standardadress; för dem krävs en
 adress i `.env` eller i anropet.
 
+En adress i anropet kommer från verktygsanroparen, och den sparas som
+bevakad källa som nattsynken sedan hämtar från. Den godtas därför bara om
+den är https och ligger hos källans egen myndighet (`domaner`) — annars
+kunde en adress som modellen läst i en okänd text bli en källa som hämtas
+varje natt.
+
 Ingångspunkter:
     SYNKAR
     Synk
     kor(synk_id, url=None, **parametrar) -> dict
     journalfor(synk_id, url, resultat, kvittera=True) -> None
+    godkann_url(synk_id, url) -> str | None
     synk_for_dataset(dataset) -> str | None
 """
 
@@ -28,6 +35,7 @@ import logging
 import os
 from dataclasses import dataclass, field
 from typing import Any, Awaitable, Callable
+from urllib.parse import urlsplit
 
 from data_och_analys.geodata import bevakning, synkstatus
 
@@ -42,6 +50,7 @@ class Synk:
     standard_url: str | None = None
     kommentar: str = ""
     tar_url: bool = field(default=False)
+    domaner: tuple[str, ...] = ()     # där källans filer får hämtas
 
 
 def _indelningar():
@@ -75,31 +84,31 @@ SYNKAR: dict[str, Synk] = {
     "tillvaxtverket_kommuntyper": Synk(
         ("kommun", "lan", "tillvaxtverket_kommuntyper"),
         _kommuntyper_alla_nivaer,
-        "DOA_TV_KOMMUNTYPER_URL", tar_url=True),
+        "DOA_TV_KOMMUNTYPER_URL", tar_url=True, domaner=("tillvaxtverket.se",)),
     "skr_kommungrupp": Synk(
         ("skr_kommungrupp",),
         lambda url=None, **p: _indelningar().synka_skr_kommungrupp(url=url, **p),
-        "DOA_SKR_KOMMUNGRUPP_URL", tar_url=True),
+        "DOA_SKR_KOMMUNGRUPP_URL", tar_url=True, domaner=("skr.se",)),
     "tillvaxtverket_fa": Synk(
         ("tillvaxtverket_fa",),
         lambda url=None, **p: _indelningar().synka_tillvaxtverket_fa_region(url=url, **p),
-        "DOA_TV_FA_REGION_URL", tar_url=True),
+        "DOA_TV_FA_REGION_URL", tar_url=True, domaner=("tillvaxtverket.se",)),
     "deso_och_regso": Synk(
         ("deso", "regso"),
         lambda url=None, **p: _indelningar().synka_deso_och_regso(url=url, **p),
-        "DOA_DESO_REGSO_URL", tar_url=True),
+        "DOA_DESO_REGSO_URL", tar_url=True, domaner=("scb.se",)),
     "valdistrikt": Synk(
         ("valdistrikt",),
         lambda url=None, **p: _indelningar().synka_valdistrikt(url=url, **p),
-        "DOA_VALDISTRIKT_URL", tar_url=True),
+        "DOA_VALDISTRIKT_URL", tar_url=True, domaner=("val.se",)),
     "valdistrikt_geom": Synk(
         ("valdistrikt_geom",),
         lambda url=None, **p: _geometrier().synka_valdistrikt_geom(url=url, **p),
-        "DOA_VALDISTRIKT_GEOM_URL", tar_url=True),
+        "DOA_VALDISTRIKT_GEOM_URL", tar_url=True, domaner=("val.se",)),
     "kommun_folkmangd": Synk(
         ("kommun_folkmangd",),
         lambda url=None, **p: _folkmangd().synka_kommun_folkmangd(url=url, **p),
-        None, bevakning.KANDA_URLER["kommun_folkmangd"], tar_url=True),
+        None, bevakning.KANDA_URLER["kommun_folkmangd"], tar_url=True, domaner=("scb.se",)),
     "postnummer": Synk(
         ("postnummer",),
         lambda url=None, **p: _indelningar().synka_postnummer_via_huwise(**p)),
@@ -135,6 +144,25 @@ def los_url(synk_id: str, url: str | None = None) -> str | None:
     return url or (os.getenv(s.url_env, "").strip() if s.url_env else "") or s.standard_url
 
 
+def godkann_url(synk_id: str, url: str | None) -> str | None:
+    """Adressen oförändrad om den får användas som källa, annars ValueError.
+
+    `None` släpps igenom: då löses adressen ur `.env` eller koden, som ägs
+    av den som driftar sviten och inte av den som anropar verktyget.
+    """
+    if url is None:
+        return None
+    s = SYNKAR[synk_id]
+    delar = urlsplit(url.strip())
+    vard = (delar.hostname or "").lower().rstrip(".")
+    if delar.scheme.lower() != "https" or not any(
+            vard == d or vard.endswith("." + d) for d in s.domaner):
+        raise ValueError(
+            f"{url} godtas inte som källa för {synk_id}: adressen måste vara https "
+            f"och ligga hos {' eller '.join(s.domaner) or 'källans myndighet'}.")
+    return url.strip()
+
+
 def _antal(resultat: Any) -> int | None:
     if isinstance(resultat, int):
         return resultat
@@ -154,12 +182,24 @@ async def journalfor(synk_id: str, url: str | None, resultat: Any,
     sitt data; de är spår av körningen, inte en del av den.
     """
     s = SYNKAR[synk_id]
+    try:
+        godkann_url(synk_id, url)
+    except ValueError as e:
+        # Verktygen prövar adressen innan de hämtar; når en otillåten adress
+        # ändå hit sparas den aldrig som bevakad källa.
+        logger.warning("%s — kvitteras inte", e)
+        kvittera = False
     anvand = los_url(synk_id, url) if kvittera else None
+    env_url = (os.getenv(s.url_env, "").strip() or None) if s.url_env else None
+    if anvand and env_url and anvand != env_url:
+        logger.warning("%s synkades från %s, som skiljer sig från %s i .env. Den schemalagda "
+                       "synken behåller den nya adressen tills .env ändras; uppdatera %s om "
+                       "den ska gälla även efter det.", synk_id, anvand, s.url_env, s.url_env)
     for dataset in s.dataset:
         try:
             await synkstatus.notera_synk(dataset, _antal(resultat), s.kommentar or None)
             if anvand:
-                await bevakning.notera_kalla(dataset, anvand)
+                await bevakning.notera_kalla(dataset, anvand, env_url)
         except Exception as e:  # noqa: BLE001
             logger.warning("Kunde inte journalföra %s efter synk: %s", dataset, e)
 
@@ -169,7 +209,7 @@ async def kor(synk_id: str, url: str | None = None, **parametrar: Any) -> dict[s
     if synk_id not in SYNKAR:
         raise ValueError(f"Okänd synk {synk_id!r}. Kända: {', '.join(SYNKAR)}")
     s = SYNKAR[synk_id]
-    anvand = los_url(synk_id, url)
+    anvand = los_url(synk_id, godkann_url(synk_id, url))
     if s.tar_url and not anvand:
         raise ValueError(f"{synk_id} saknar adress. Ange den i anropet eller sätt {s.url_env} i .env — "
                          "källan byter adress vid varje publicering och har ingen standardadress.")

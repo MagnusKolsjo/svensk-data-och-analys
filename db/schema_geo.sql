@@ -314,3 +314,7 @@ CREATE TABLE IF NOT EXISTS kallsignatur (
     senast_kontrollerad TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     senast_andrad       TIMESTAMPTZ
 );
+-- Värdet i DOA_*_URL när signaturen sattes. Den schemalagda synken byter
+-- källa bara när .env ändrats sedan dess; en adress som angetts i ett
+-- verktygsanrop backas då inte till den äldre adressen i .env.
+ALTER TABLE kallsignatur ADD COLUMN IF NOT EXISTS env_url TEXT;
